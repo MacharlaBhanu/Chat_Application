@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import axios from "axios";
-import { Buffer } from "buffer";
 import loader from "../assets/loader.gif";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -9,11 +8,11 @@ import { useNavigate } from "react-router-dom";
 import { setAvatarRoute } from "../utlis/ApiRoutes";
 
 export default function SetAvatar() {
-  const api = `https://api.multiavatar.com/4645646`;
   const navigate = useNavigate();
   const [avatars, setAvatars] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAvatar, setSelectedAvatar] = useState(undefined);
+
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -22,11 +21,34 @@ export default function SetAvatar() {
     theme: "dark",
   };
 
+  // RoboHash sets: set1=robots, set2=monsters, set3=robot-heads, set4=cats
+  const ROBOHASH_SET = "set1";
+
+  const fetchAvatars = async () => {
+    setIsLoading(true);
+    setSelectedAvatar(undefined);
+    const data = [];
+    for (let i = 0; i < 4; i++) {
+      const seed = Math.round(Math.random() * 100000);
+      const url = `https://robohash.org/${seed}?set=${ROBOHASH_SET}&size=200x200`;
+      const response = await axios.get(url, { responseType: "arraybuffer" });
+      const base64 = btoa(
+        new Uint8Array(response.data).reduce(
+          (d, byte) => d + String.fromCharCode(byte),
+          ""
+        )
+      );
+      data.push(`data:image/png;base64,${base64}`);
+    }
+    setAvatars(data);
+    setIsLoading(false);
+  };
+
   const setProfilePicture = async () => {
     if (selectedAvatar === undefined) {
       toast.error("Please select an avatar", toastOptions);
     } else {
-      const user = await JSON.parse(localStorage.getItem("chat-app-user"));
+      const user = JSON.parse(localStorage.getItem("chat-app-user"));
       const { data } = await axios.post(`${setAvatarRoute}/${user._id}`, {
         image: avatars[selectedAvatar],
       });
@@ -43,37 +65,12 @@ export default function SetAvatar() {
   };
 
   useEffect(() => {
-    const checkLoggedIn = async () => {
-      if (!localStorage.getItem("chat-app-user")) {
-        navigate("/login");
-      }
-    };
-
-    checkLoggedIn();
+    if (!localStorage.getItem("chat-app-user")) {
+      navigate("/login");
+    } else {
+      fetchAvatars();
+    }
   }, [navigate]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
-      const data = [];
-      for (let i = 0; i < 4; i++) {
-        const image = await axios.get(`${api}/${Math.round(Math.random() * 1000)}`);
-        const buffer = new Buffer(image.data);
-        data.push(buffer.toString("base64"));
-      }
-      if (isMounted) {
-        setAvatars(data);
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [api]);
 
   return (
     <>
@@ -87,26 +84,27 @@ export default function SetAvatar() {
             <h1>Pick an Avatar as your profile picture</h1>
           </div>
           <div className="avatars">
-            {avatars.map((avatar, index) => {
-              return (
-                <div
-                  className={`avatar ${
-                    selectedAvatar === index ? "selected" : ""
-                  }`}
-                  key={index}
-                >
-                  <img
-                    src={`data:image/svg+xml;base64,${avatar}`}
-                    alt="avatar"
-                    onClick={() => setSelectedAvatar(index)}
-                  />
-                </div>
-              );
-            })}
+            {avatars.map((avatar, index) => (
+              <div
+                className={`avatar ${selectedAvatar === index ? "selected" : ""}`}
+                key={index}
+                onClick={() => setSelectedAvatar(index)}
+              >
+                <img src={avatar} alt={`avatar-${index}`} />
+                {selectedAvatar === index && (
+                  <div className="check-badge">✓</div>
+                )}
+              </div>
+            ))}
           </div>
-          <button onClick={setProfilePicture} className="submit-btn">
-            Set as Profile Picture
-          </button>
+          <div className="buttons">
+            <button onClick={setProfilePicture} className="submit-btn">
+              Set as Profile Picture
+            </button>
+            <button onClick={fetchAvatars} className="reload-btn">
+              🔄 Generate New Avatars
+            </button>
+          </div>
           <ToastContainer />
         </Container>
       )}
@@ -131,29 +129,72 @@ const Container = styled.div`
   .title-container {
     h1 {
       color: white;
+      font-size: 1.8rem;
     }
   }
+
   .avatars {
     display: flex;
     gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
 
     .avatar {
-      border: 0.4rem solid transparent;
-      padding: 0.4rem;
-      border-radius: 5rem;
+      position: relative;
+      border: 0.35rem solid transparent;
+      padding: 0.5rem;
+      border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
-      transition: 0.5s ease-in-out;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      background-color: #1a1a35;
+
       img {
-        height: 6rem;
-        transition: 0.5s ease-in-out;
+        height: 7rem;
+        width: 7rem;
+        border-radius: 50%;
+        object-fit: cover;
+        transition: transform 0.3s ease-in-out;
+      }
+
+      &:hover {
+        border-color: #7c4dff;
+        transform: scale(1.05);
+      }
+
+      .check-badge {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        background-color: #4e0eff;
+        color: white;
+        border-radius: 50%;
+        width: 1.5rem;
+        height: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+        border: 2px solid #131324;
       }
     }
+
     .selected {
-      border: 0.4rem solid #4e0eff;
+      border-color: #4e0eff;
+      box-shadow: 0 0 18px #4e0effaa;
     }
   }
+
+  .buttons {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
   .submit-btn {
     background-color: #4e0eff;
     color: white;
@@ -164,9 +205,28 @@ const Container = styled.div`
     border-radius: 0.4rem;
     font-size: 1rem;
     text-transform: uppercase;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: #3a0bcc;
+    }
+  }
+
+  .reload-btn {
+    background-color: transparent;
+    color: #4e0eff;
+    padding: 1rem 2rem;
+    border: 0.2rem solid #4e0eff;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 0.4rem;
+    font-size: 1rem;
+    text-transform: uppercase;
+    transition: all 0.3s;
+
     &:hover {
       background-color: #4e0eff;
+      color: white;
     }
   }
 `;
-

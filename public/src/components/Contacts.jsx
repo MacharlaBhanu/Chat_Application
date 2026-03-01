@@ -1,77 +1,85 @@
 import React, { useState, useEffect } from "react";
-import styled from 'styled-components'
+import styled from "styled-components";
 import Logo from "../assets/logo.svg";
-function Contacts({contacts,currentUser,changeChat}) {
-    const [currentUserName, setCurrentUserName] = useState(undefined);
-    const [currentUserImage, setCurrentUserImage] = useState(undefined);
-    const [currentSelected, setCurrentSelected] = useState(undefined);
-   useEffect(()=>{
-    if(currentUser){
-        setCurrentUserImage(currentUser.avatarImage);
-        setCurrentUserName(currentUser.username);
 
+function Contacts({ contacts, currentUser, changeChat }) {
+  const [currentUserName, setCurrentUserName] = useState(undefined);
+  const [currentUserImage, setCurrentUserImage] = useState(undefined);
+  const [currentSelected, setCurrentSelected] = useState(undefined);
+
+  useEffect(() => {
+    if (currentUser) {
+      setCurrentUserImage(currentUser.avatarImage);
+      setCurrentUserName(currentUser.username);
     }
+  }, [currentUser]);
 
-   },[currentUser])
-   const changeCurrentChat =(index,contact) => {
+  const changeCurrentChat = (index, contact) => {
     setCurrentSelected(index);
     changeChat(contact);
-   }
-    return (
+  };
+
+  // Helper: returns proper image src whether it's a full data URL or raw base64
+  const getAvatarSrc = (image) => {
+    if (!image) return "";
+    if (image.startsWith("data:")) return image; // already a full data URL (new RoboHash format)
+    return `data:image/svg+xml;base64,${image}`; // legacy SVG base64 format
+  };
+
+  return (
     <>
-      {
-         currentUserImage && currentUserName && (
-            <Container>
-               <div className="brand">
-                  <img src={Logo} alt="logo" />
-                  <h3>snappy</h3>
-                    
-                </div> 
-            <div className="contacts">
-               {contacts.map((contact, index) => {
-                 return (
-                   <div
-                     key={contact._id}
-                     className={`contact ${
-                       index === currentSelected ? "selected" : ""
-                     }`}
-                     onClick={() => changeCurrentChat(index, contact)}
-                   >
-                     <div className="avatar">
-                       <img
-                         src={`data:image/svg+xml;base64,${contact.avatarImage}`}
-                         alt=""
-                       />
-                     </div>
-                     <div className="username">
-                       <h3>{contact.username}</h3>
-                     </div>
-                       </div>
-                     );
-                   })}
+      {currentUserImage && currentUserName && (
+        <Container>
+          <div className="brand">
+            <img src={Logo} alt="logo" />
+            <h3>snappy</h3>
+          </div>
+          <div className="contacts">
+            {contacts.map((contact, index) => {
+              return (
+                <div
+                  key={contact._id}
+                  className={`contact ${
+                    index === currentSelected ? "selected" : ""
+                  }`}
+                  onClick={() => changeCurrentChat(index, contact)}
+                >
+                  <div className="avatar">
+                    <img
+                      src={getAvatarSrc(contact.avatarImage)}
+                      alt={contact.username}
+                    />
+                  </div>
+                  <div className="username">
+                    <h3>{contact.username}</h3>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="current-user">
-                 <div className="avatar">
-                   <img
-                     src={`data:image/svg+xml;base64,${currentUserImage}`}
-                     alt="avatar"
-                   />
-                 </div>
-                 <div className="username">
-                   <h2>{currentUserName}</h2>
-                 </div>
+            <div className="avatar">
+              <img
+                src={getAvatarSrc(currentUserImage)}
+                alt="avatar"
+              />
+            </div>
+            <div className="username">
+              <h2>{currentUserName}</h2>
+            </div>
           </div>
-            </Container>
-         )
-      }
+        </Container>
+      )}
     </>
-  )
+  );
 }
+
 const Container = styled.div`
   display: grid;
   grid-template-rows: 10% 75% 15%;
   overflow: hidden;
   background-color: #080420;
+
   .brand {
     display: flex;
     align-items: center;
@@ -85,6 +93,7 @@ const Container = styled.div`
       text-transform: uppercase;
     }
   }
+
   .contacts {
     display: flex;
     flex-direction: column;
@@ -113,6 +122,9 @@ const Container = styled.div`
       .avatar {
         img {
           height: 3rem;
+          width: 3rem;
+          border-radius: 50%;
+          object-fit: cover;
         }
       }
       .username {
@@ -135,6 +147,9 @@ const Container = styled.div`
     .avatar {
       img {
         height: 4rem;
+        width: 4rem;
+        border-radius: 50%;
+        object-fit: cover;
         max-inline-size: 100%;
       }
     }
@@ -153,4 +168,5 @@ const Container = styled.div`
     }
   }
 `;
-export default Contacts
+
+export default Contacts;
